@@ -16,6 +16,11 @@ public class Spawner : MonoBehaviour, INetworkRunnerCallbacks
     private Dictionary<PlayerRef, NetworkObject> _spawnedCharacters = new Dictionary<PlayerRef, NetworkObject>();
 
     [SerializeField] GameObject buttonPanel;
+    [SerializeField] GameObject backgroundPanel;
+    [SerializeField] TMPro.TMP_Text loadingText;
+
+    [SerializeField] Camera mainCam;
+    [SerializeField] Camera playerCam;
 
     public void StartGameAsHost()
     {
@@ -38,6 +43,7 @@ public class Spawner : MonoBehaviour, INetworkRunnerCallbacks
     async void StartGame(GameMode mode)
     {
         buttonPanel.SetActive(false);
+        loadingText.gameObject.SetActive(true);
 
         // Create the Fusion runner and let it know that we will be providing user input
         _runner = gameObject.AddComponent<NetworkRunner>();
@@ -113,6 +119,7 @@ public class Spawner : MonoBehaviour, INetworkRunnerCallbacks
         if(_spawnedPrefabs.Count == _playerPrefabs.Count)
         {
             Debug.Log("Ran out of prefabs to spawn");
+            loadingText.text = "Ran out of prefabs to spawn.";
             _runner.Disconnect(player);
             return;
         }
@@ -131,20 +138,28 @@ public class Spawner : MonoBehaviour, INetworkRunnerCallbacks
         }
         while (_spawnedPrefabs.Count != _playerPrefabs.Count && _spawnedPrefabs.Contains(random));
 
-
         _spawnedPrefabs.Add(random);
 
         NetworkPrefabRef _playerPrefab = _playerPrefabs[random];
         NetworkObject networkPlayerObject = runner.Spawn(_playerPrefab, spawnPosition, Quaternion.identity, player);
-            
-        // Keep track of the player avatars so we can remove it when they disconnect
-        _spawnedCharacters.Add(player, networkPlayerObject);
-        Debug.Log("Character count: " + _spawnedCharacters.Count);
 
         if (player == _runner.LocalPlayer)
         {
+            backgroundPanel.SetActive(false);
+            loadingText.gameObject.SetActive(false);
+
+            mainCam.gameObject.SetActive(false);
+
+            playerCam = networkPlayerObject.gameObject.GetComponentInChildren<Camera>();
+            playerCam.tag = "MainCamera";
+            playerCam.gameObject.SetActive(true);
+
             Debug.Log("Local player");
         }
+
+        // Keep track of the player avatars so we can remove it when they disconnect
+        _spawnedCharacters.Add(player, networkPlayerObject);
+        Debug.Log("Character count: " + _spawnedCharacters.Count);
     }
 
     public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
