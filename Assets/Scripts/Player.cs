@@ -5,19 +5,24 @@ using UnityEngine;
 
 public class Player : NetworkBehaviour
 {
-    private NetworkCharacterControllerPrototype _cc;
+    [Networked] public string Name { get; set; }
+    [Networked] public NetworkBool Ready { get; set; }
+    [Networked] public NetworkBool InputEnabled { get; set; }
 
-    private void Awake()
+    public override void Spawned()
     {
-        _cc = GetComponent<NetworkCharacterControllerPrototype>();
+        NetworkManager.Instance.SetPlayer(Object.InputAuthority, this);
     }
 
-    public override void FixedUpdateNetwork()
-    {
-        if (GetInput(out NetworkInputData data))
-        {
-            data.direction.Normalize();
-            _cc.Move(5 * data.direction * Runner.DeltaTime);
-        }
-    }
+	[Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+	public void RPC_SetIsReady(NetworkBool ready)
+	{
+		Ready = ready;
+	}
+
+	[Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+	public void RPC_SetName(string name)
+	{
+		Name = name;
+	}
 }
